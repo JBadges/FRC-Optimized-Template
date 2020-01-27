@@ -11,14 +11,40 @@ public class LoopManager {
     private boolean running;
     private boolean calledEnable, calledDisable;
     private boolean isEnabled, isDisabled;
+    private double wanted_dt;
 
     public LoopManager() {
-        running = false;
-        loops = new ArrayList<>();
-        calledEnable = false;
-        calledDisable = false;
-        isEnabled = true;
-        isDisabled = true;
+        this(0);
+    }
+
+    public LoopManager(double dt) {
+        this.wanted_dt = dt;
+        this.running = false;
+        this.loops = new ArrayList<>();
+        this.calledEnable = false;
+        this.calledDisable = false;
+        this.isEnabled = true;
+        this.isDisabled = true;
+        this.lt = new LoopedThread(wanted_dt) {
+            @Override
+            public void update(double dt) {
+                for (Loop loop : loops) {
+                    loop.allLoop(dt);
+                }
+
+                if (isEnabled) {
+                    for (Loop loop : loops) {
+                        loop.enabledLoop(dt);
+                    }
+                }
+
+                if (isDisabled) {
+                    for (Loop loop : loops) {
+                        loop.disabledLoop(dt);
+                    }
+                }
+            }
+        };
     }
 
     public synchronized void addLoop(Loop loop) {
@@ -43,10 +69,10 @@ public class LoopManager {
 
     public void callOnDisable() {
         if (!calledDisable) {
-            calledDisable = true;
-            calledEnable = false;
             isEnabled = false;
             isDisabled = true;
+            calledEnable = false;
+            calledDisable = true;
             for (Loop loop : loops) {
                 loop.onDisable();
             }
@@ -55,23 +81,17 @@ public class LoopManager {
 
     public synchronized void start() {
         if (!running) {
-            synchronized (lock) {
-                for (Loop loop : loops) {
-                    loop.onFirstStart();
-                }
-                running = true;
+            for (Loop loop : loops) {
+                loop.onFirstStart();
             }
+            running = true;
             lt.start();
         }
     }
 
     public synchronized void stop() {
-        if (running) {
-            lt.stop();
-            synchronized (lock) {
-                running = false;
-            }
-        }
+        running = false;
+        lt.stop();
     }
 
 }

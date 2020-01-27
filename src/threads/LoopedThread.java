@@ -9,10 +9,13 @@ public abstract class LoopedThread {
     private boolean shouldLoop = false;
     private long dt = 0;
 
-    public LoopedThread() {
+    public LoopedThread() {}
 
-    }
-
+    /**
+     *
+     * @param desired_dt - the minimum/goal delta time per loop.
+     *                   Thus, set to 0 for looping as fast as possible
+     */
     public LoopedThread(double desired_dt) {
         this.desiredLoopTime = desired_dt;
     }
