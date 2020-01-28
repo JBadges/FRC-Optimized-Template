@@ -1,15 +1,16 @@
 package threads;
 
-public abstract class LoopedThread {
+public abstract class LoopedThread implements Runnable {
 
-    private Thread thread;
-    private double lastExecutionTime;
+    private volatile Thread thread;
     // In seconds
     private double desiredLoopTime;
     private boolean shouldLoop = false;
     private long dt = 0;
 
-    public LoopedThread() {}
+    public LoopedThread() {
+        this(0);
+    }
 
     /**
      *
@@ -18,6 +19,7 @@ public abstract class LoopedThread {
      */
     public LoopedThread(double desired_dt) {
         this.desiredLoopTime = desired_dt;
+        thread = new Thread(this);
     }
 
     /**
@@ -26,27 +28,45 @@ public abstract class LoopedThread {
      */
     public abstract void update(double dt);
 
-    public synchronized void start() {
-        shouldLoop = true;
-        loop();
+    @Override
+    public void run() {
+        long lastCall = System.nanoTime();
+        double sleepTill = lastCall;
+        while (shouldLoop) {
+            long time = System.nanoTime();
+            if(time > sleepTill) {
+                sleepTill = desiredLoopTime * 1e9 + time;
+                dt = time - lastCall;
+                update(dt * 1e-9);
+                lastCall = System.nanoTime();
+            }
+        }
     }
 
-    public synchronized void stop() {
+    public void start() {
+        shouldLoop = true;
+        if(thread == null || !thread.isAlive()) {
+            thread = new Thread(this);
+            thread.start();
+        }
+    }
+
+    public void stop() {
         shouldLoop = false;
     }
 
-    public void loop() {
-        while (shouldLoop) {
-            long time = System.currentTimeMillis();
-            update(dt/1000.0);
-            dt = System.currentTimeMillis() - time;
-            try {
-                Thread.sleep((long) Math.max(0, desiredLoopTime*1000-dt));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            dt = System.currentTimeMillis() - time;
-        }
+    /**
+     * May show exceptions in the console even when caught
+     *
+     * ForceStop calls the threads interrupt to try to end the
+     * thread as quickly as possible. NOTE: THIS DOES NOT MEAN
+     * THE THREAD WILL STOP IMMEDIATELY AFTER THIS METHOD IS CALLED.
+     */
+    public void interrupt() {
+        shouldLoop = false;
+        try {
+            thread.interrupt();
+        } catch (Exception e) {}
     }
 
 }
