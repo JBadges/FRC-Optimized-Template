@@ -6,6 +6,7 @@ public abstract class LoopedThread implements Runnable {
     // In seconds
     private double desiredLoopTime;
     private volatile boolean shouldLoop = false;
+    // In seconds
     private long dt = 0;
 
     public LoopedThread() {
